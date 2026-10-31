@@ -1,4 +1,4 @@
-"""Interfaz gráfica (Tkinter) para combinar 2 documentos de Word en un PDF."""
+"""Interfaz gráfica (Tkinter) para combinar 2 documentos (PDF o Word) en un PDF."""
 
 from __future__ import annotations
 
@@ -10,9 +10,11 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from .core import combine_word_documents
+from .core import combine_documents
 
-WORD_FILETYPES = [
+DOC_FILETYPES = [
+    ("PDF y Word", "*.pdf *.docx *.doc *.docm *.rtf *.odt"),
+    ("PDF", "*.pdf"),
     ("Documentos de Word", "*.docx *.doc *.docm *.rtf *.odt"),
     ("Todos los archivos", "*.*"),
 ]
@@ -33,14 +35,14 @@ class PdfCreatorApp(ttk.Frame):
     def __init__(self, master: tk.Tk) -> None:
         super().__init__(master, padding=16)
         self.master = master
-        master.title("PDF Creator – Combinar Word en PDF")
+        master.title("PDF Creator – Combinar documentos en un PDF")
         master.minsize(560, 0)
 
         self.doc1 = tk.StringVar()
         self.doc2 = tk.StringVar()
         self.output = tk.StringVar()
         self.open_after = tk.BooleanVar(value=True)
-        self.status = tk.StringVar(value="Elegí los dos documentos de Word.")
+        self.status = tk.StringVar(value="Elegí los dos documentos (PDF o Word).")
 
         self._build()
         self.grid(sticky="nsew")
@@ -51,7 +53,7 @@ class PdfCreatorApp(ttk.Frame):
     def _build(self) -> None:
         self.columnconfigure(1, weight=1)
 
-        ttk.Label(self, text="Combinar 2 documentos de Word en un PDF",
+        ttk.Label(self, text="Combinar 2 documentos (PDF o Word) en un PDF",
                   font=("TkDefaultFont", 12, "bold")).grid(
             row=0, column=0, columnspan=3, sticky="w", pady=(0, 12))
 
@@ -83,8 +85,8 @@ class PdfCreatorApp(ttk.Frame):
         ttk.Button(self, text=button_text, command=command).grid(row=row, column=2, padx=(8, 0), pady=4)
 
     # ------------------------------------------------------------ actions
-    def _pick_word(self, var: tk.StringVar) -> None:
-        path = filedialog.askopenfilename(title="Elegir documento de Word", filetypes=WORD_FILETYPES)
+    def _pick_document(self, var: tk.StringVar) -> None:
+        path = filedialog.askopenfilename(title="Elegir documento (PDF o Word)", filetypes=DOC_FILETYPES)
         if path:
             var.set(path)
             if not self.output.get():
@@ -92,10 +94,10 @@ class PdfCreatorApp(ttk.Frame):
                 self.output.set(str(first.with_name(first.stem + "_combinado.pdf")))
 
     def _pick_doc1(self) -> None:
-        self._pick_word(self.doc1)
+        self._pick_document(self.doc1)
 
     def _pick_doc2(self) -> None:
-        self._pick_word(self.doc2)
+        self._pick_document(self.doc2)
 
     def _pick_output(self) -> None:
         initial = Path(self.output.get()) if self.output.get() else None
@@ -136,7 +138,7 @@ class PdfCreatorApp(ttk.Frame):
 
     def _worker(self, docs: list[Path], out: Path) -> None:
         try:
-            result = combine_word_documents(docs, out, progress=self._report)
+            result = combine_documents(docs, out, progress=self._report)
         except Exception as exc:
             self.after(0, self._on_error, exc)
         else:

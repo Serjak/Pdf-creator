@@ -10,9 +10,12 @@ import tempfile
 from pathlib import Path
 from typing import Callable, Iterable
 
-from pypdf import PdfWriter
+from pypdf import PdfReader, PdfWriter
+from pypdf.errors import PdfReadError
 
 WORD_EXTENSIONS = {".docx", ".doc", ".docm", ".rtf", ".odt"}
+PDF_EXTENSIONS = {".pdf"}
+SUPPORTED_EXTENSIONS = WORD_EXTENSIONS | PDF_EXTENSIONS
 
 
 class ConversionError(Exception):
@@ -146,41 +149,76 @@ def convert_to_pdf(src: Path, out_dir: Path) -> Path:
     )
 
 
+def _read_pdf(pdf: Path) -> PdfReader:
+    """Abre un PDF, desbloqueando los que solo tienen restricciones sin contraseña."""
+    try:
+        reader = PdfReader(str(pdf))
+        if reader.is_encrypted and not reader.decrypt(""):
+            raise ConversionError(f"El PDF {pdf.name} está protegido con contraseña.")
+        len(reader.pages)  # fuerza la lectura para detectar archivos dañados
+    except ConversionError:
+        raise
+    except (PdfReadError, OSError, ValueError) as exc:
+        raise ConversionError(f"No se pudo leer el PDF {pdf.name}: {exc}") from exc
+    return reader
+
+
 def merge_pdfs(pdfs: Iterable[Path], output: Path) -> None:
     """Combina varios PDFs, en orden, en un único archivo."""
     writer = PdfWriter()
     for pdf in pdfs:
-        writer.append(str(pdf))
+        writer.append(_read_pdf(Path(pdf)))
     output.parent.mkdir(parents=True, exist_ok=True)
     with open(output, "wb") as fh:
         writer.write(fh)
     writer.close()
 
 
-def combine_word_documents(
+def combine_documents(
     documents: list[Path],
     output: Path,
     progress: Callable[[str], None] | None = None,
 ) -> Path:
-    """Convierte cada documento de Word a PDF y los combina en ``output``."""
+    """Combina documentos de Word y/o PDF, en orden, en un único PDF ``output``.
+
+    Los PDF se usan tal cual; los documentos de Word se convierten antes.
+    """
     if len(documents) < 2:
         raise ValueError("Se necesitan al menos 2 documentos.")
 
     report = progress or (lambda _msg: None)
     output = Path(output)
+    for doc in documents:
+        if Path(doc).suffix.lower() not in SUPPORTED_EXTENSIONS:
+            raise ConversionError(f"Formato no soportado: {Path(doc).name}")
+        if Path(doc).resolve() == output.resolve():
+            raise ConversionError(
+                "El PDF de salida no puede ser uno de los documentos a combinar.\n"
+                "Elegí otro nombre para el archivo de salida."
+            )
 
     with tempfile.TemporaryDirectory(prefix="pdf_creator_") as tmp:
         tmp_dir = Path(tmp)
         pdfs: list[Path] = []
         for index, doc in enumerate(documents, start=1):
-            report(f"Convirtiendo {index}/{len(documents)}: {Path(doc).name}…")
+            doc = Path(doc)
+            if doc.suffix.lower() in PDF_EXTENSIONS:
+                if not doc.is_file():
+                    raise ConversionError(f"No se encontró el archivo: {doc}")
+                pdfs.append(doc)
+                continue
+            report(f"Convirtiendo {index}/{len(documents)}: {doc.name}…")
             # Subcarpeta por documento para evitar choques si tienen el mismo nombre.
             sub = tmp_dir / str(index)
             sub.mkdir()
-            pdfs.append(convert_to_pdf(Path(doc), sub))
+            pdfs.append(convert_to_pdf(doc, sub))
 
         report("Combinando documentos…")
         merge_pdfs(pdfs, output)
 
     report(f"Listo: {output}")
     return output
+
+
+# Compatibilidad con el nombre anterior.
+combine_word_documents = combine_documents

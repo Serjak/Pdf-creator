@@ -61,6 +61,6 @@ jobs:
           target_commitish: ${{ github.sha }}
           make_latest: true
           body: |
-            Descargá **PDFCreator.exe** y abrilo con doble clic (no hace falta Python).
-            La PC necesita Microsoft Word o LibreOffice para convertir los documentos.
+            Descargá **PDFCreator.exe** y abrilo con doble clic (no hace falta Python). Funciona en Windows 7 a 11.
+            Combina 2 documentos PDF o Word en un único PDF. Para usar documentos de Word, la PC necesita Microsoft Word o LibreOffice.
           files: dist/PDFCreator.exe

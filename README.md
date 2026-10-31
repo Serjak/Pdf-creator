@@ -11,6 +11,8 @@ No hace falta instalar Python. Solo hay que descargar `PDFCreator.exe`:
 2. Copiá el `.exe` a la PC (escritorio, pendrive, donde quieras) y abrilo con doble clic.
    Si Windows muestra *"Windows protegió su PC"*, hacé clic en **Más información → Ejecutar de todas formas** (aparece porque el ejecutable no está firmado digitalmente).
 
+Funciona en Windows 7, 8, 10 y 11 (32 o 64 bits). En Windows 7, si aparece un error por falta de `api-ms-win-crt-runtime-l1-1-0.dll`, instalá el *Visual C++ Redistributable 2015-2022 (x86)* de Microsoft.
+
 **Importante:** la PC necesita **Microsoft Word** o **LibreOffice** (gratis: https://www.libreoffice.org/download/) para convertir los documentos. La app usa Word si está; si no, LibreOffice.
 
 ## Uso

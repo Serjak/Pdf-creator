@@ -42,8 +42,23 @@ jobs:
           name: PDFCreator-windows
           path: dist/PDFCreator.exe
 
+      - name: Leer versión
+        id: version
+        shell: pwsh
+        run: |
+          $v = python -c "import pdf_creator; print(pdf_creator.__version__)"
+          "tag=v$v" >> $env:GITHUB_OUTPUT
+
+      # Se publica al lanzar el workflow a mano, al subir un tag v* o con cada push a main.
       - name: Publicar release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || steps.version.outputs.tag }}
+          name: PDF Creator ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          body: |
+            Descargá **PDFCreator.exe** y abrilo con doble clic (no hace falta Python).
+            La PC necesita Microsoft Word o LibreOffice para convertir los documentos.
           files: dist/PDFCreator.exe

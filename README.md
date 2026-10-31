@@ -29,7 +29,7 @@ pip install -r requirements.txt
 python run.py
 ```
 
-El `.exe` se compila automáticamente en GitHub Actions con cada push (`.github/workflows/build-windows.yml`). Al subir un tag `v*` (por ejemplo `v1.0.0`) se publica además un Release con el `.exe`. También se puede compilar localmente en Windows con `build_exe.bat`.
+El `.exe` se compila automáticamente en GitHub Actions con cada push (`.github/workflows/build-windows.yml`). Además se publica un Release con el `.exe` al lanzar el workflow a mano (**Actions → Compilar ejecutable de Windows → Run workflow**), con cada push a `main` o al subir un tag `v*`. La versión sale de `pdf_creator/__init__.py`. También se puede compilar localmente en Windows con `build_exe.bat`.
 
 ## Estructura
 

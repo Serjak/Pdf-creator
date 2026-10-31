@@ -41,11 +41,38 @@ def _find_libreoffice() -> str | None:
     return None
 
 
-def _convert_with_word(src: Path, dst: Path) -> None:
-    """Convierte usando Microsoft Word (Windows/macOS) mediante docx2pdf."""
-    from docx2pdf import convert  # import diferido: dependencia opcional
+def _convert_with_word_windows(src: Path, dst: Path) -> None:
+    """Convierte usando Microsoft Word en Windows vía COM (pywin32)."""
+    import pythoncom  # import diferido: solo existe en Windows
+    import win32com.client
 
-    convert(str(src), str(dst))
+    pythoncom.CoInitialize()  # necesario: se llama desde un hilo secundario
+    word = None
+    try:
+        word = win32com.client.DispatchEx("Word.Application")
+        word.Visible = False
+        word.DisplayAlerts = 0
+        doc = word.Documents.Open(
+            str(src), ConfirmConversions=False, ReadOnly=True, AddToRecentFiles=False
+        )
+        try:
+            doc.ExportAsFixedFormat(str(dst), 17)  # 17 = wdExportFormatPDF
+        finally:
+            doc.Close(False)
+    finally:
+        if word is not None:
+            word.Quit()
+        pythoncom.CoUninitialize()
+
+
+def _convert_with_word(src: Path, dst: Path) -> None:
+    """Convierte usando Microsoft Word (Windows por COM, macOS vía docx2pdf)."""
+    if platform.system() == "Windows":
+        _convert_with_word_windows(src, dst)
+    else:
+        from docx2pdf import convert  # import diferido: dependencia opcional
+
+        convert(str(src), str(dst))
     if not dst.exists():
         raise ConversionError("Microsoft Word no generó el PDF.")
 
@@ -65,7 +92,8 @@ def _convert_with_libreoffice(soffice: str, src: Path, out_dir: Path) -> Path:
             str(out_dir),
             str(src),
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        extra = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, **extra)
     except subprocess.TimeoutExpired as exc:
         raise ConversionError(f"LibreOffice tardó demasiado en convertir {src.name}.") from exc
     finally:
@@ -98,7 +126,7 @@ def convert_to_pdf(src: Path, out_dir: Path) -> Path:
             _convert_with_word(src, dst)
             return dst
         except ImportError:
-            errors.append("docx2pdf no está instalado")
+            errors.append("falta pywin32/docx2pdf para usar Microsoft Word")
         except Exception as exc:  # Word no instalado, error de COM, etc.
             errors.append(f"Microsoft Word: {exc}")
 

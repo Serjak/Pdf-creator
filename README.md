@@ -2,30 +2,34 @@
 
 App de escritorio para elegir **2 documentos de Word** y generar **un único PDF** con ambos combinados (primero el documento 1, después el documento 2).
 
-## Requisitos
+## Instalar en una PC sin Python (Windows)
 
-- Python 3.9 o superior (con Tkinter, que viene incluido en el instalador oficial de Windows/macOS).
-- Para convertir Word → PDF hace falta **una** de estas dos opciones:
-  - **Microsoft Word** instalado (Windows o macOS), o
-  - **LibreOffice** (gratis): https://www.libreoffice.org/download/
+No hace falta instalar Python. Solo hay que descargar `PDFCreator.exe`:
 
-La app usa Word si está disponible; si no, usa LibreOffice automáticamente.
+1. Entrá a la pestaña **Releases** del repositorio y descargá `PDFCreator.exe` de la última versión.
+   (Otra opción: en **Actions → Compilar ejecutable de Windows**, abrí la última ejecución exitosa y descargá el artefacto `PDFCreator-windows`, que es un .zip con el .exe adentro.)
+2. Copiá el `.exe` a la PC (escritorio, pendrive, donde quieras) y abrilo con doble clic.
+   Si Windows muestra *"Windows protegió su PC"*, hacé clic en **Más información → Ejecutar de todas formas** (aparece porque el ejecutable no está firmado digitalmente).
 
-## Instalación y uso
+**Importante:** la PC necesita **Microsoft Word** o **LibreOffice** (gratis: https://www.libreoffice.org/download/) para convertir los documentos. La app usa Word si está; si no, LibreOffice.
 
-```bash
-pip install -r requirements.txt
-python run.py
-```
+## Uso
 
 1. Hacé clic en **Examinar…** para elegir el *Documento 1* y el *Documento 2* (`.docx`, `.doc`, `.rtf`, `.odt`).
 2. Usá **⇅ Invertir orden** si querés cambiar cuál va primero.
 3. Elegí dónde guardar el PDF (por defecto `<documento1>_combinado.pdf`).
 4. Hacé clic en **Generar PDF**.
 
-## Crear un ejecutable (.exe) para Windows
+## Para desarrolladores
 
-Doble clic en `build_exe.bat` (o ejecutalo desde una consola). El ejecutable queda en `dist\PDFCreator.exe` y se puede usar sin abrir Python.
+Con Python 3.9+:
+
+```bash
+pip install -r requirements.txt
+python run.py
+```
+
+El `.exe` se compila automáticamente en GitHub Actions con cada push (`.github/workflows/build-windows.yml`). Al subir un tag `v*` (por ejemplo `v1.0.0`) se publica además un Release con el `.exe`. También se puede compilar localmente en Windows con `build_exe.bat`.
 
 ## Estructura
 

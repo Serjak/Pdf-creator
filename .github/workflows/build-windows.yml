@@ -1,0 +1,66 @@
+name: Compilar ejecutable de Windows
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Python 3.8 de 32 bits: es la última versión que funciona en Windows 7,
+      # y un .exe de 32 bits corre en Windows de 32 y de 64 bits.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+          architecture: x86
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install -r requirements.txt "pywin32==306" "pyinstaller==5.13.2"
+
+      - name: Compilar PDFCreator.exe
+        run: python -m PyInstaller --noconfirm --onefile --windowed --name PDFCreator --hidden-import win32timezone run.py
+
+      - name: Verificar que el ejecutable arranca
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist\PDFCreator.exe -PassThru
+          Start-Sleep -Seconds 15
+          if ($p.HasExited) { Write-Error "PDFCreator.exe se cerró al iniciar (código $($p.ExitCode))"; exit 1 }
+          Stop-Process -Id $p.Id -Force
+          Write-Host "PDFCreator.exe arrancó correctamente"
+
+      - name: Subir ejecutable
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDFCreator-windows
+          path: dist/PDFCreator.exe
+
+      - name: Leer versión
+        id: version
+        shell: pwsh
+        run: |
+          $v = python -c "import pdf_creator; print(pdf_creator.__version__)"
+          "tag=v$v" >> $env:GITHUB_OUTPUT
+
+      # Se publica al lanzar el workflow a mano, al subir un tag v* o con cada push a main.
+      - name: Publicar release
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || steps.version.outputs.tag }}
+          name: PDF Creator ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          body: |
+            Descargá **PDFCreator.exe** y abrilo con doble clic (no hace falta Python). Funciona en Windows 7 a 11.
+            Combina 2 documentos PDF o Word en un único PDF. Para usar documentos de Word, la PC necesita Microsoft Word o LibreOffice.
+          files: dist/PDFCreator.exe
